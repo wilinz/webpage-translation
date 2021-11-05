@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "网页翻译",
+  "description": "网页翻译",
+  "version": "1.0",
+  "permissions": [
+    "tabs"
+  ],
+  "browser_action": {
+    "default_icon": "img/128.png",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": [
+      "scripts/google_translate.js",
+      "scripts/background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "scripts/content_script.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

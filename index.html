@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<iframe id="a" src="https://www.baidu.com" onload="onload()" width="100%" height="550px"></iframe>
+<div>网页翻译</div>
+<script>
+    var iframe=document.getElementById("a")
+    function onload() {
+        console.log(iframe.innerHTML)
+    }
+</script>
+</body>
+</html>
