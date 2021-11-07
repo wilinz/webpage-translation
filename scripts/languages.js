@@ -1,4 +1,4 @@
-var languages = [
+let languages = [
     {
         "name": "阿尔巴尼亚语",
         "code": "sq"

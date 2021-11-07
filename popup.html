@@ -4,9 +4,68 @@
     <meta charset="UTF-8">
     <title>Google Translate</title>
     <style>
-        body{
-            width: 200px;
-            height: 200px;
+        body {
+            width: auto;
+            height: auto;
+        }
+
+        input[name="translate"] {
+
+        }
+
+
+        /*.test_box {*/
+        /*    width: 50%;*/
+        /*    min-height: 250px;*/
+        /*    margin: 1em auto;*/
+        /*    position: relative;*/
+        /*}*/
+        .test_tab {
+            width: auto;
+            /*margin-right: -1px;*/
+            /*border-bottom: 1px solid #ccc;*/
+            /*border-bottom: 0;*/
+            /*float: left;*/
+            display: flex;
+        }
+
+        .tab-group {
+            margin-top: 8px;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .test_label {
+            user-select: none;
+            white-space: nowrap;
+            width: auto;
+            padding: 5px 25px;
+            /*background-color: #eee;*/
+            text-align: center;
+            border-bottom: 1px solid #ccc;
+            box-sizing: content-box;
+            border-top: 2px solid #00000000;
+            border-left: 2px solid #00000000;
+            border-right: 2px solid #00000000;
+        }
+
+        .test_radio /*,
+        .test_tab_content */
+        {
+            position: absolute;
+            left: -999em;
+        }
+
+        .test_radio:checked ~ .test_label {
+            background-color: #fff;
+            border: 2px solid #4285F4FF;
+            color: #4285F4FF;
+        }
+
+        select {
+            width: 100%;
+            padding: 5px;
         }
     </style>
     <script src="/scripts/languages.js"></script>
@@ -15,12 +74,28 @@
 <body>
 
 <div>
-    <select id="source-language-selector">
-    </select>
-    <select id="target-language-selector">
-    </select>
+    <label>
+        源语言：<br>
+        <select id="source-language-selector" class="mdb-select md-form" searchable="Search here..">
+        </select>
+    </label><br>
+    <label>
+        翻译为：<br>
+        <select id="target-language-selector" class="mdb-select md-form" searchable="Search here..">
+        </select>
+    </label>
 </div>
-<a class="gtx-a" id="translate-page" href>翻译此页面</a>
+<div class="tab-group">
+    <div class="test_tab">
+        <input type="radio" id="source" class="test_radio" name="is-translate" value="false" checked="checked"/>
+        <label class="test_label" for="source">显示原始网页</label>
+    </div>
+    <div class="test_tab">
+        <input type="radio" id="translate" class="test_radio" name="is-translate" value="true"/>
+        <label class="test_label" for="translate">翻译</label>
+    </div>
+</div>
+<!--<a class="gtx-a" id="translate-page" href>翻译此页面</a>-->
 <script src="scripts/popup.js"></script>
 </body>
 </html>

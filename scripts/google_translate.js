@@ -6,8 +6,7 @@ function googleTranslate(tabId, q, index, from, to) {
             var resp = JSON.parse(xmlhttp.responseText);
             var translateResult = resp[0];
             var result = [];
-            for (var _i = 0, translateResult_1 = translateResult; _i < translateResult_1.length; _i++) {
-                var e = translateResult_1[_i];
+            for (const e of translateResult) {
                 var resultText = e[0];
                 result.push(resultText.trim());
             }
@@ -18,7 +17,7 @@ function googleTranslate(tabId, q, index, from, to) {
         }
     };
     var tk = token(q);
-    var urlValue = new URLSearchParams();
+    let urlValue = new URLSearchParams();
     urlValue.append("client", "webapp");
     urlValue.append("sl", from);
     urlValue.append("tl", to);

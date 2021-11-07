@@ -1,85 +1,146 @@
-var traverseNodes: TraverseTextNodes;
+// noinspection TypeScriptValidateJSTypes
+
+var traverseNodesUtil: TraverseTextNodesUtil;
 
 function init() {
-    traverseNodes = new TraverseTextNodes();
+    //实例化遍历文本节点工具
+    traverseNodesUtil = new TraverseTextNodesUtil();
     // @ts-ignore
+    // 注册chrome消息监听器
     chrome.runtime.onMessage.addListener(
         function (request, sender, sendResponse) {
 
-            if (request.greeting == "getText") {
-                traverseNodes.reset()
-                traverseNodes.traverse(document.documentElement)
-                sendResponse(traverseNodes.textBlockArray);
-                // textBlockArray.length = 0
-                // console.log(t.textBlockArray)
-                for (const e of traverseNodes.textNodeArray) {
-                    for (const node of e) {
-                        // console.log(node.parentElement.nodeName.toLowerCase())
-                    }
-                }
-
-            }
-
-            if (request.greeting == "translation") {
-                var translation = request.message
-                var position = request.e_position
-                var aimNodes = traverseNodes.textNodeArray[position]
-                for (let i in aimNodes) {
-                    var node = aimNodes[i]
-                    var text = translation[i]
-
-                    if (node.nodeName.toLowerCase() == "input") {
-                        var newNode = <Element>node
-                        var type = newNode.getAttribute("type")
-
-                        switch (type) {
-                            case "text":
-                            case "email":
-                            case "password":
-                                newNode.setAttribute("placeholder", text)
-                                break
-                            default:
-                                newNode.setAttribute("value", text)
-                                break
+            switch (request.greeting) {
+                //后台请求获取源文本
+                case "getText":
+                    if (traverseNodesUtil.isTranslated) {
+                        var j = 0
+                        for (const e of traverseNodesUtil.textNodeArray) {
+                            var k = 0
+                            for (const node of e) {
+                                // console.log(node.parentElement.nodeName.toLowerCase())
+                                replaceNodeText(node, traverseNodesUtil.translation[j][k])
+                                k++
+                            }
+                            j++
                         }
-                    } else {
-                        node.nodeValue = text
+                    } else { //重置遍历工具
+                        traverseNodesUtil.reset()
+                        //遍历
+                        traverseNodesUtil.traverse(document.documentElement)
+                        //发送源文本给后台，文本已经分片，单片size<5000
+                        sendResponse(traverseNodesUtil.textSliceArray);
                     }
-                }
-            }
+                    break
+                //后台翻译好了，请求替换文本
+                case "translate":
 
+                    var translation = request.message //翻译结果
+                    var position = request.e_position //元素索引
+
+                    traverseNodesUtil.translation.fill(null, 0, traverseNodesUtil.textNodeArray.length - 1)
+                    traverseNodesUtil.translation[position] = translation
+                    traverseNodesUtil.translatedCount++
+                    if (traverseNodesUtil.translatedCount == traverseNodesUtil.textSliceArray.length) {
+                        console.log("翻译完成")
+                        traverseNodesUtil.isTranslated = true
+                    }
+
+                    var aimNodes = traverseNodesUtil.textNodeArray[position] //目标节点数组
+                    for (let i in aimNodes) {
+                        replaceNodeText(aimNodes[i], translation[i])
+                    }
+                    break
+                case "showSourceText":
+                    if (traverseNodesUtil.isTranslated) {
+                        var i = 0
+                        for (const e of traverseNodesUtil.textNodeArray) {
+                            for (const node of e) {
+                                // console.log(node.parentElement.nodeName.toLowerCase())
+                                replaceNodeText(node, traverseNodesUtil.sourceText[i])
+                                i++
+                            }
+                        }
+                    }
+                    break
+                case "showTranslation":
+                    if (traverseNodesUtil.isTranslated) {
+                        var j = 0
+                        for (const e of traverseNodesUtil.textNodeArray) {
+                            var k = 0
+                            for (const node of e) {
+                                // console.log(node.parentElement.nodeName.toLowerCase())
+                                replaceNodeText(node, traverseNodesUtil.translation[j][k])
+                                k++
+                            }
+                            j++
+                        }
+                    }
+                    break
+            }
         });
 }
 
-class TraverseTextNodes {
-    textBlockArray: string[] = []
-    textNodeArray: Node[][] = []
-    private textNodeBuf: Node[] = []
-    private stringBuilder = ""
+function replaceNodeText(node: Node, text: string) {
+    if (node.nodeName.toLowerCase() == "input") {
+        var newNode = <Element>node
+        var type = newNode.getAttribute("type")
 
-    static textBlockMaxLength = 5000;
+        switch (type) {
+            case "text":
+            case "email":
+            case "password":
+                newNode.setAttribute("placeholder", text)
+                break
+            default:
+                newNode.setAttribute("value", text)
+                break
+        }
+    } else {
+        node.nodeValue = text
+    }
+}
 
+class TraverseTextNodesUtil {
+    translatedCount = 0
+    isTranslated = false
+    translation: string[][] = []
+    textSliceArray: string[] = []//文本分片数组, 单片size<=5000,
+    textNodeArray: Node[][] = []//节点分片数组，索引与textSliceArray一致，方便操作
+    private textNodeSlice: Node[] = []//节点分片
+    private stringSlice = ""//文本分片
+
+    sourceText: string[] = []//源文本
+    static textBlockMaxLength = 5000;//文本分片size
+
+    //遍历函数
     traverse(node: HTMLElement) {
         this.traverseNodes(node)
-        if (this.stringBuilder.length > 0) {
-            this.textBlockArray.push(this.stringBuilder);
-            this.stringBuilder = ""
+        //遍历结束后处理剩余文本
+        if (this.stringSlice.length > 0) {
+            this.textSliceArray.push(this.stringSlice);
+            this.stringSlice = ""
 
-            this.textNodeArray.push(this.textNodeBuf)
-            this.textNodeBuf = []
+            this.textNodeArray.push(this.textNodeSlice)
+            this.textNodeSlice = []
         }
+
     }
 
     reset() {
-        this.textBlockArray = []
+        this.isTranslated = false
+        this.translatedCount = 0
+        this.translation = []
+        this.textSliceArray = []
         this.textNodeArray = []
-        this.textNodeBuf = []
-        this.stringBuilder = ""
+        this.textNodeSlice = []
+        this.stringSlice = ""
     }
 
     private handleTextNode(node: Node) {
         var nodeValue
 
+        //如果是input元素，另外操作
         if (node.nodeName.toLowerCase() == "input") {
             var newNode = <Element>node
             var type = newNode.getAttribute("type")
@@ -90,48 +151,53 @@ class TraverseTextNodes {
                     nodeValue = newNode.getAttribute("placeholder")
                     break
                 default:
-                     nodeValue = newNode.getAttribute("value")
+                    nodeValue = newNode.getAttribute("value")
                     break
             }
 
-        } else {
+        }
+        //否则按文本节点操作
+        else {
             nodeValue = node.nodeValue
         }
+
         if (nodeValue != null) {
+            //去除首尾空格字符
             nodeValue = nodeValue.trim()
         }
         if (nodeValue !== "" && nodeValue != null) {
             //console.log(nodeValue)
             //node1.nodeValue = "测试
-            if (this.stringBuilder.length + nodeValue.length > TraverseTextNodes.textBlockMaxLength) {
+            //如果加入此文本后，字符切片大小超过5000，则将切片写入数组并清空切片
+            if (this.stringSlice.length + nodeValue.length > TraverseTextNodesUtil.textBlockMaxLength) {
 
-                this.textBlockArray.push(this.stringBuilder);
-                this.stringBuilder = "";
+                this.textSliceArray.push(this.stringSlice);
+                this.stringSlice = "";
 
-                this.textNodeArray.push(this.textNodeBuf)
-                this.textNodeBuf = []
+                this.textNodeArray.push(this.textNodeSlice)
+                this.textNodeSlice = []
             }
 
-            this.textNodeBuf.push(node);
-            this.stringBuilder += (nodeValue + "\n");
+            // 写入切片
+            this.textNodeSlice.push(node);
+            this.stringSlice += (nodeValue + "\n");
+            this.sourceText.push(nodeValue)
         }
     }
 
-    private static isTextNode(nodeName: string) {
+    //判断是否是文本节点
+    private static isTextNode(nodeName: string): boolean {
         var reg = /style|script|head|body|textarea|noscript|html/
         return !reg.test(nodeName.toLowerCase())
     }
 
+    //遍历节点
     private traverseNodes(node: Node) {
         //判断是否是元素节点
         if (node.nodeType == 1) {
             //判断该元素节点是否有子节点
             if (node.nodeName.toLowerCase() == "input") {
                 this.handleTextNode(node)
-            }if (node.nodeName.toLowerCase() == "iframe"){
-                console.log("this is a iframe,nodeType:"+node.nodeType)
-                var iframe=node as HTMLIFrameElement
-                this.traverse(iframe.contentWindow.document.documentElement)
             } else if (node.hasChildNodes) {
                 //得到所有的子节点
                 let childNodes = node.childNodes;
@@ -140,7 +206,7 @@ class TraverseTextNodes {
                     //得到具体的某个子节点
                     let child = childNodes.item(i)
                     //如果是文本节点
-                    if (child.nodeType == 3 && TraverseTextNodes.isTextNode(child.parentNode.nodeName)) {
+                    if (child.nodeType == 3 && TraverseTextNodesUtil.isTextNode(child.parentNode.nodeName)) {
                         this.handleTextNode(child);
                     }
                     //递归遍历
